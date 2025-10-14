@@ -1,0 +1,248 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #000C66;
+    --primary-hover: #13208a;
+}
+
+body,
+html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+.container {
+	/* gradient overlay + image: use forward slashes and quote the URL; avoid backslash escapes */
+	background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("../img/WhatsApp Image 2025-09-23 at 17.13.03_03107350.jpg");
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+	height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.login-form {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 40px 50px;
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    color: white;
+    width: 360px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+    text-align: center;
+}
+
+.login-form h2 {
+    margin-bottom: 30px;
+    font-weight: 700;
+    font-size: 22px;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group .icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffffffcc;
+    font-size: 18px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border-radius: 6px;
+    border: 1px solid #ffffff66;
+    background: transparent;
+    color: black;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input-group input::placeholder {
+    color: #ffffffcc;
+}
+
+.input-group input:focus {
+    border-color: white;
+}
+
+.password-group {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #ffffffcc;
+    font-size: 18px;
+    user-select: none;
+}
+
+.options {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 30px;
+    align-items: center;
+}
+
+.options label {
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.options label input[type='checkbox'] {
+    accent-color: white;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.options a {
+    color: #e8e8e8cc;
+    text-decoration: none;
+    user-select: none;
+    font-size: 13px;
+}
+
+.options a:hover {
+    text-decoration: underline;
+}
+
+button {
+    width: 100%;
+    background: var(--primary);
+    padding: 12px 0;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    user-select: none;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+}
+
+.divider {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #ffffffb3;
+    font-size: 13px;
+}
+
+.social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+/* Social buttons: support anchors/buttons with images or inline SVGs */
+.social-icons a,
+.social-icons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    text-decoration: none;
+    box-shadow: 0 8px 22px rgba(2, 8, 23, 0.18);
+    transition: transform .12s ease, box-shadow .12s ease;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.social-icons img,
+.social-icons svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+}
+
+/* Ensure raster images don't inherit unexpected background and remain crisp */
+.social-icons a img {
+    display: block;
+    max-width: 22px;
+    max-height: 22px;
+}
+
+.social-icons a:hover,
+.social-icons button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(2, 8, 23, 0.22);
+}
+
+/* Brand variants */
+.social-icons a.google {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.social-icons a.apple {
+    background: #000000;
+    color: #ffffff;
+}
+
+.social-icons a.facebook {
+    background: #1877F2;
+    color: #ffffff;
+}
+
+.social-icons a.linkedin {
+    background: #0077B5;
+    color: #ffffff;
+}
+
+/* Only apply currentColor to brand icons that rely on it (Apple, Facebook, LinkedIn). 
+  Do not overwrite explicit fills in multicolor SVGs like Google's G. */
+.social-icons a.apple svg path {
+    fill: currentColor;
+}
+
+.social-icons a.facebook svg path {
+    fill: currentColor;
+}
+
+.social-icons a.linkedin svg path {
+    fill: currentColor;
+}
+
+/* Keyboard focus ring for accessibility */
+.social-icons a:focus-visible,
+.social-icons button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.12);
+    outline-offset: 4px;
+}
+
+@media (max-width: 400px) {
+    .login-form {
+        width: 90%;
+        padding: 30px 20px;
+    }
+}
