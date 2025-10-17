@@ -1,71 +1,89 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
+
 include '../inc/config.php';
 
-// For now, we'll use a placeholder institution_id
+// Fetch institution details
 $institution_id = $_SESSION['institution_id'] ?? 1;
+$stmt = $conn->prepare("SELECT name, location FROM institution_details WHERE id = ?");
+$stmt->bind_param("i", $institution_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$institution = $result->fetch_assoc() ?: [
+    'name' => 'University of Lagos (UNILAG)',
+    'location' => 'Akoka, Yaba, Lagos State, Nigeria'
+];
 
-// Fetch communities from database
+// Fetch communities
 $communities = [];
 $totalCommunities = 0;
-
-$sql = "SELECT 
-            c.id,
-            c.name,
-            c.description,
-            c.created_at,
-            COUNT(DISTINCT cm.user_id) as member_count,
-            COUNT(DISTINCT p.id) as post_count
-        FROM student_communities c
-        LEFT JOIN community_members cm ON c.id = cm.community_id
-        LEFT JOIN posts p ON c.id = p.community_id
-        GROUP BY c.id
-        ORDER BY c.created_at DESC";
-
-$result = @$conn->query($sql);
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $communities[] = $row;
-    }
-    $totalCommunities = count($communities);
+$sql = "
+    SELECT 
+        c.id,
+        c.name,
+        c.description,
+        c.icon,
+        c.status,
+        c.created_at,
+        COUNT(DISTINCT cm.user_id) as member_count,
+        COUNT(DISTINCT p.id) as post_count
+    FROM student_communities c
+    LEFT JOIN community_members cm ON c.id = cm.community_id
+    LEFT JOIN posts p ON c.id = p.community_id
+    WHERE c.institution_id = ?
+    GROUP BY c.id
+    ORDER BY c.created_at DESC";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $institution_id);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $communities[] = $row;
 }
+$totalCommunities = count($communities);
 
-// If no communities found, use sample data
+// Fallback sample data
 if (empty($communities)) {
     $communities = [
         [
             'id' => 1,
             'name' => 'Biology 101',
-            'description' => 'Introduction to biological sciences for first-year students...',
+            'description' => 'Introduction to biological sciences for first-year students.',
             'icon' => '🧪',
             'member_count' => 87,
             'post_count' => 50,
-            'status' => 'active'
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s')
         ],
         [
             'id' => 2,
             'name' => 'Art & Design Studio',
-            'description' => 'Creative space for art and design students to share work...',
+            'description' => 'Creative space for art and design students to share work.',
             'icon' => '🎨',
             'member_count' => 87,
             'post_count' => 15,
-            'status' => 'active'
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s')
         ],
         [
             'id' => 3,
             'name' => 'CS Club',
-            'description' => 'Computer Science student organization focused on coding...',
+            'description' => 'Computer Science student organization focused on coding.',
             'icon' => '💻',
             'member_count' => 87,
             'post_count' => 47,
-            'status' => 'active'
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s')
         ]
     ];
     $totalCommunities = count($communities);
 }
 
-// Helper function to get icon colors
-function getIconColor($index) {
+// Helper function for icon colors
+function getIconColor($index)
+{
     $colors = [
         ['bg' => '#f0e6ff', 'color' => '#793DDC'],
         ['bg' => '#fff3e0', 'color' => '#ff9800'],
@@ -76,654 +94,33 @@ function getIconColor($index) {
     return $colors[$index % count($colors)];
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Institution - Communities</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        :root {
-            --primary-color: #793DDC;
-            --primary-dark: #6a00d6;
-            --background-color: #F8F7FF;
-            --card-background: #FFFFFF;
-            --text-color: #333333;
-            --light-text: #666666;
-            --border-color: #EEEEEE;
-            --font-regular: 500;
-            --font-medium: 600;
-            --font-bold: 700;
-            --header-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            --hover-bg: rgba(121, 61, 220, 0.08);
-            --transition-normal: 0.3s ease;
-            --font-primary: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
+    <title><?php echo htmlspecialchars($institution['name']); ?> - Communities</title>
+    <link rel="stylesheet" href="../fontawesome-free-6.7.2-web/css/all.min.css">
+    <link rel="stylesheet" href="../css/faculty-directory.css">
 
-        body {
-            font-family: var(--font-primary);
-            margin: 0;
-            padding: 20px;
-            background-color: var(--background-color);
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            line-height: 1.6;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1400px;
-            display: flex;
-            background-color: var(--card-background);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-            min-height: 100vh;
-        }
-
-        .header {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            border-bottom: 1px solid var(--border-color);
-            background-color: var(--card-background);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .header-icon {
-            width: 40px;
-            height: 40px;
-            border: none;
-            background: none;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition-normal);
-            color: var(--text-color);
-        }
-
-        .header-icon:hover {
-            background-color: var(--hover-bg);
-            color: var(--primary-color);
-            transform: translateY(-2px);
-        }
-
-        .header-icon i {
-            font-size: 20px;
-        }
-
-        .sidebar {
-            width: 280px;
-            padding: 24px;
-            border-right: 1px solid var(--border-color);
-            flex-shrink: 0;
-            background-color: var(--card-background);
-            height: 100vh;
-            position: sticky;
-            top: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            overflow-y: auto;
-        }
-
-        .institution-info {
-            text-align: left;
-            padding: 16px;
-            background: var(--background-color);
-            border-radius: 12px;
-            margin-bottom: 8px;
-        }
-
-        .institution-info h2 {
-            font-size: 18px;
-            color: var(--text-color);
-            margin: 0 0 8px 0;
-            font-weight: var(--font-bold);
-            line-height: 1.4;
-        }
-
-        .institution-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: var(--font-medium);
-            margin: 8px 0;
-        }
-
-        .institution-location {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--light-text);
-            font-size: 13px;
-            margin-top: 8px;
-        }
-        
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            margin-bottom: 4px;
-            color: var(--light-text);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            font-weight: var(--font-medium);
-        }
-
-        .nav-link i {
-            font-size: 18px;
-            width: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .nav-link:hover {
-            background-color: var(--hover-bg);
-            color: var(--primary-color);
-            transform: translateX(4px);
-        }
-
-        .nav-link.active {
-            background-color: var(--hover-bg);
-            color: var(--primary-color);
-            font-weight: var(--font-bold);
-            position: relative;
-        }
-
-        .nav-link.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            height: 60%;
-            width: 4px;
-            background-color: var(--primary-color);
-            border-radius: 0 4px 4px 0;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            padding: 0 30px 30px 30px;
-        }
-        
-        .dashboard-tabs {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
-            padding: 10px 0;
-        }
-
-        .tab-navigation {
-            display: flex;
-            gap: 25px;
-        }
-
-        .tab-button {
-            padding: 10px 0;
-            cursor: pointer;
-            font-weight: 600;
-            color: var(--light-text);
-            border-bottom: 3px solid transparent;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .tab-button.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-        }
-        
-        .page-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 32px 0;
-            padding: 0 4px;
-        }
-
-        .page-title {
-            font-size: 22px;
-            color: var(--text-color);
-            margin: 0;
-            font-weight: var(--font-bold);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .community-count {
-            font-size: 14px;
-            color: var(--light-text);
-            background: var(--background-color);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: var(--font-medium);
-        }
-        
-        .create-btn {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-weight: var(--font-medium);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(121, 61, 220, 0.2);
-            text-decoration: none;
-        }
-
-        .create-btn i {
-            font-size: 16px;
-            transition: transform 0.3s ease;
-        }
-
-        .create-btn:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(121, 61, 220, 0.3);
-        }
-
-        .communities-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 8px;
-            background-color: transparent;
-            margin: 0 auto;
-        }
-
-        .communities-table tr {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .communities-table tbody tr {
-            background-color: var(--card-background);
-            box-shadow: var(--card-shadow);
-            margin-bottom: 8px;
-        }
-
-        .communities-table tbody tr:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-        }
-
-        .communities-table tr td:first-child {
-            border-top-left-radius: 8px;
-            border-bottom-left-radius: 8px;
-        }
-
-        .communities-table tr td:last-child {
-            border-top-right-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-
-        .communities-table th, .communities-table td {
-            padding: 16px;
-            text-align: left;
-        }
-
-        .communities-table th {
-            color: var(--light-text);
-            font-weight: var(--font-medium);
-            font-size: 13px;
-            padding: 16px;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .communities-table th.sortable {
-            cursor: pointer;
-            transition: color 0.2s ease;
-        }
-
-        .communities-table th.sortable:hover {
-            color: var(--primary-color);
-        }
-
-        .communities-table th.sortable i {
-            margin-left: 4px;
-            font-size: 12px;
-            opacity: 0.6;
-        }
-
-        .communities-table td {
-            background-color: var(--card-background);
-            font-size: 14px;
-            color: var(--text-color);
-        }
-
-        .community-name {
-            display: flex;
-            align-items: center;
-        }
-
-        .community-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-color: #ddd;
-            margin-right: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 16px;
-        }
-        
-        .community-description {
-            color: var(--light-text);
-            font-size: 13px;
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .action-button {
-            padding: 6px 12px;
-            margin-right: 6px;
-            border: 1px solid var(--border-color);
-            background: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-color);
-            height: 32px;
-        }
-
-        .action-button:last-child {
-            margin-right: 0;
-        }
-
-        .action-button i {
-            font-size: 14px;
-            opacity: 0.8;
-        }
-
-        .action-button:hover {
-            background-color: var(--hover-bg);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-            transform: translateY(-1px);
-        }
-
-        .action-button.delete-btn:hover {
-            background-color: #ffebee;
-            border-color: #f44336;
-            color: #f44336;
-        }
-        
-        .status-tag {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-active {
-            background-color: #e8f5e9;
-            color: #4caf50;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--light-text);
-        }
-
-        .empty-state i {
-            font-size: 64px;
-            color: var(--border-color);
-            margin-bottom: 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 20px;
-            margin-bottom: 10px;
-            color: var(--text-color);
-        }
-
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-content {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 0;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            transform: translateY(-50px);
-            transition: transform 0.3s ease;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .modal-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            font-size: 20px;
-            color: var(--text-color);
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: var(--light-text);
-            padding: 5px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-            background: var(--hover-bg);
-            color: var(--primary-color);
-        }
-
-        .modal-body {
-            padding: 20px;
-        }
-
-        .community-detail {
-            padding: 20px;
-        }
-
-        .community-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .community-stats {
-            display: flex;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--light-text);
-        }
-
-        .statistics-detail {
-            padding: 20px;
-        }
-
-        .statistics-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .stat-card {
-            background: var(--background-color);
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin: 10px 0;
-        }
-
-        .stat-trend {
-            font-size: 14px;
-            color: #4caf50;
-        }
-
-        .edit-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            font-weight: 500;
-            color: var(--text-color);
-        }
-
-        .form-group input,
-        .form-group textarea {
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-family: inherit;
-            transition: all 0.2s ease;
-        }
-
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(121, 61, 220, 0.1);
-        }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .cancel-btn,
-        .save-btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .cancel-btn {
-            background: none;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-        }
-
-        .save-btn {
-            background: var(--primary-color);
-            border: none;
-            color: white;
-        }
-
-        .cancel-btn:hover {
-            background: var(--hover-bg);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        .save-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-    </style>
 </head>
+
 <body>
     <div class="container">
         <div class="sidebar">
             <div class="institution-info">
-                <h2>University of Lagos (UNILAG)</h2>
+                <h2><?php echo htmlspecialchars($institution['name']); ?></h2>
                 <div class="institution-badge">
                     <i class="fa-solid fa-check-circle"></i>
                     Verified Institution
                 </div>
                 <div class="institution-location">
                     <i class="fa-solid fa-location-dot"></i>
-                    Lagos State, Nigeria
+                    <?php echo htmlspecialchars($institution['location']); ?>
                 </div>
             </div>
-
             <nav>
                 <a href="institution_admindashboard.php" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
                 <a href="institution_adminabout.php" class="nav-link"><i class="fa-solid fa-circle-info"></i> About</a>
@@ -733,10 +130,13 @@ function getIconColor($index) {
         </div>
 
         <div class="main-content">
-            <div class="header" style="padding: 15px 0; border-bottom: none;">
+            <div class="header">
                 <div style="font-size: 24px; font-weight: bold; color: var(--primary-color);">My Communities</div>
+                <div class="header-actions">
+                    <button class="header-icon" title="Notifications"><i class="fa-regular fa-bell"></i></button>
+                    <button class="header-icon" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                </div>
             </div>
-            
             <div class="dashboard-tabs">
                 <div class="tab-navigation">
                     <a href="institution_admindashboard.php" class="tab-button">Dashboard</a>
@@ -744,21 +144,19 @@ function getIconColor($index) {
                     <a href="institution_admincommunity.php" class="tab-button active">Communities</a>
                     <a href="institution_admin_faculty.php" class="tab-button">Faculty</a>
                 </div>
-                <div class="header-actions">
-                    <button class="header-icon" title="Notifications"><i class="fa-regular fa-bell"></i></button>
-                    <button class="header-icon" title="Settings"><i class="fa-solid fa-gear"></i></button>
-                </div>
             </div>
-            
             <div class="page-actions">
                 <div class="page-title">
                     Managed Communities
                     <span class="community-count"><?php echo $totalCommunities; ?> communities</span>
                 </div>
-                <a href="../create_community.php" class="create-btn" role="button">
+                <button class="create-btn" onclick="openCreateModal()">
                     <i class="fa-solid fa-plus"></i>
                     Create Community
-                </a>
+                </button>
+            </div>
+            <div class="search-bar">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search communities...">
             </div>
 
             <?php if (empty($communities)): ?>
@@ -778,32 +176,32 @@ function getIconColor($index) {
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <?php foreach ($communities as $index => $community): 
+                    <tbody id="communityTableBody">
+                        <?php foreach ($communities as $index => $community):
                             $colors = getIconColor($index);
                         ?>
-                        <tr data-community-id="<?php echo $community['id']; ?>">
-                            <td>
-                                <div class="community-name">
-                                    <div class="community-icon" style="background-color: <?php echo $colors['bg']; ?>; color: <?php echo $colors['color']; ?>;">
-                                        <?php echo htmlspecialchars($community['icon'] ?? '📚'); ?>
+                            <tr data-community-id="<?php echo $community['id']; ?>">
+                                <td>
+                                    <div class="community-name">
+                                        <div class="community-icon" style="background-color: <?php echo $colors['bg']; ?>; color: <?php echo $colors['color']; ?>;">
+                                            <?php echo htmlspecialchars($community['icon'] ?? '📚'); ?>
+                                        </div>
+                                        <div>
+                                            <strong><?php echo htmlspecialchars($community['name']); ?></strong>
+                                            <div class="community-description"><?php echo htmlspecialchars($community['description']); ?></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <strong><?php echo htmlspecialchars($community['name']); ?></strong>
-                                        <div class="community-description"><?php echo htmlspecialchars($community['description']); ?></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td><?php echo $community['member_count']; ?></td>
-                            <td><?php echo $community['post_count']; ?></td>
-                            <td><span class="status-tag status-active"><?php echo ucfirst($community['status']); ?></span></td>
-                            <td>
-                                <button class="action-button" onclick="viewCommunity(this)"><i class="fa-solid fa-eye"></i>View</button>
-                                <button class="action-button" onclick="showStatistics(this)"><i class="fa-solid fa-chart-line"></i>Statistics</button>
-                                <button class="action-button" onclick="editCommunity(this)"><i class="fa-solid fa-pen"></i>Edit</button>
-                                <button class="action-button delete-btn" onclick="deleteCommunity(this)"><i class="fa-solid fa-trash"></i>Delete</button>
-                            </td>
-                        </tr>
+                                </td>
+                                <td><?php echo number_format($community['member_count']); ?></td>
+                                <td><?php echo number_format($community['post_count']); ?></td>
+                                <td><span class="status-tag status-<?php echo $community['status']; ?>"><?php echo ucfirst($community['status']); ?></span></td>
+                                <td>
+                                    <button class="action-button" onclick="viewCommunity(<?php echo $community['id']; ?>)"><i class="fa-solid fa-eye"></i> View</button>
+                                    <button class="action-button" onclick="showStatistics(<?php echo $community['id']; ?>)"><i class="fa-solid fa-chart-line"></i> Statistics</button>
+                                    <button class="action-button" onclick="editCommunity(<?php echo $community['id']; ?>)"><i class="fa-solid fa-pen"></i> Edit</button>
+                                    <button class="action-button delete-btn" onclick="deleteCommunity(<?php echo $community['id']; ?>, '<?php echo htmlspecialchars($community['name']); ?>')"><i class="fa-solid fa-trash"></i> Delete</button>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -811,91 +209,270 @@ function getIconColor($index) {
         </div>
     </div>
 
+    <!-- Create Community Modal -->
+    <div class="modal-overlay" id="createCommunityModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Create Community</div>
+                <button class="modal-close" onclick="closeModal('createCommunityModal')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="createName">Community Name</label>
+                    <input type="text" class="form-control" id="createName" required maxlength="255">
+                </div>
+                <div class="form-group">
+                    <label for="createDescription">Description</label>
+                    <textarea class="form-control" id="createDescription" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="createIcon">Icon (Emoji)</label>
+                    <input type="text" class="form-control" id="createIcon" placeholder="e.g., 📚" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="createStatus">Status</label>
+                    <select class="form-control" id="createStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('createCommunityModal')">Cancel</button>
+                <button class="btn-primary" onclick="createCommunity()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Community Modal -->
+    <div class="modal-overlay" id="editCommunityModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Edit Community</div>
+                <button class="modal-close" onclick="closeModal('editCommunityModal')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editName">Community Name</label>
+                    <input type="text" class="form-control" id="editName" required maxlength="255">
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea class="form-control" id="editDescription" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editIcon">Icon (Emoji)</label>
+                    <input type="text" class="form-control" id="editIcon" placeholder="e.g., 📚" maxlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">Status</label>
+                    <select class="form-control" id="editStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <input type="hidden" id="editCommunityId">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('editCommunityModal')">Cancel</button>
+                <button class="btn-primary" onclick="saveEditCommunity()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Community Modal -->
+    <div class="modal-overlay" id="viewCommunityModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Community Details</div>
+                <button class="modal-close" onclick="closeModal('viewCommunityModal')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="viewCommunityContent"></div>
+        </div>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div class="modal-overlay" id="statisticsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Community Statistics</div>
+                <button class="modal-close" onclick="closeModal('statisticsModal')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="statisticsContent"></div>
+        </div>
+    </div>
+
     <script>
-        // Sort functionality
-        document.querySelectorAll('.sortable').forEach(header => {
-            header.addEventListener('click', () => {
-                const column = header.dataset.sort;
-                const tbody = document.querySelector('.communities-table tbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
-                const isAsc = !header.classList.contains('sort-asc');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Communities page loaded.');
 
-                document.querySelectorAll('.sortable').forEach(h => 
-                    h.classList.remove('sort-asc', 'sort-desc'));
-                header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+            // Navigation sync
+            const navLinks = document.querySelectorAll('.nav-link');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const handleNavClick = (event) => {
+                navLinks.forEach(link => link.classList.remove('active'));
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                const targetLink = event.currentTarget;
+                if (targetLink.classList.contains('nav-link')) {
+                    targetLink.classList.add('active');
+                    const linkText = targetLink.textContent.trim();
+                    tabButtons.forEach(btn => {
+                        if (btn.textContent.trim() === linkText) {
+                            btn.classList.add('active');
+                        }
+                    });
+                } else if (targetLink.classList.contains('tab-button')) {
+                    targetLink.classList.add('active');
+                    const linkText = targetLink.textContent.trim();
+                    navLinks.forEach(link => {
+                        if (link.textContent.trim().includes(linkText)) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            };
+            navLinks.forEach(link => link.addEventListener('click', handleNavClick));
+            tabButtons.forEach(btn => btn.addEventListener('click', handleNavClick));
 
-                rows.sort((a, b) => {
-                    let aVal, bVal;
-                    switch(column) {
-                        case 'name':
-                            aVal = a.querySelector('strong').textContent;
-                            bVal = b.querySelector('strong').textContent;
-                            break;
-                        case 'members':
-                        case 'posts':
-                            aVal = parseInt(a.children[column === 'members' ? 1 : 2].textContent);
-                            bVal = parseInt(b.children[column === 'members' ? 1 : 2].textContent);
-                            break;
-                        case 'status':
-                            aVal = a.querySelector('.status-tag').textContent;
-                            bVal = b.querySelector('.status-tag').textContent;
-                            break;
-                    }
-                    return isAsc ? aVal > bVal ? 1 : -1 : aVal < bVal ? 1 : -1;
+            // Sorting
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.sort;
+                    const tbody = document.querySelector('#communityTableBody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    const isAsc = !header.classList.contains('sort-asc');
+
+                    document.querySelectorAll('.sortable').forEach(h =>
+                        h.classList.remove('sort-asc', 'sort-desc'));
+                    header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+
+                    rows.sort((a, b) => {
+                        let aVal, bVal;
+                        switch (column) {
+                            case 'name':
+                                aVal = a.querySelector('strong').textContent.toLowerCase();
+                                bVal = b.querySelector('strong').textContent.toLowerCase();
+                                break;
+                            case 'members':
+                            case 'posts':
+                                aVal = parseInt(a.children[column === 'members' ? 1 : 2].textContent.replace(/,/g, ''));
+                                bVal = parseInt(b.children[column === 'members' ? 1 : 2].textContent.replace(/,/g, ''));
+                                break;
+                            case 'status':
+                                aVal = a.querySelector('.status-tag').textContent.toLowerCase();
+                                bVal = b.querySelector('.status-tag').textContent.toLowerCase();
+                                break;
+                        }
+                        return isAsc ? aVal > bVal ? 1 : -1 : aVal < bVal ? 1 : -1;
+                    });
+                    rows.forEach(row => tbody.appendChild(row));
                 });
+            });
 
-                rows.forEach(row => tbody.appendChild(row));
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', () => {
+                const query = document.getElementById('searchInput').value.toLowerCase();
+                const rows = document.querySelectorAll('#communityTableBody tr');
+                rows.forEach(row => {
+                    const name = row.querySelector('strong').textContent.toLowerCase();
+                    const description = row.querySelector('.community-description').textContent.toLowerCase();
+                    row.style.display = name.includes(query) || description.includes(query) ? '' : 'none';
+                });
             });
         });
 
-        // Modal functionality
-        function showModal(title, content) {
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>${title}</h2>
-                        <button class="modal-close" onclick="closeModal(this)">
-                            <i class="fa-solid fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        ${content}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            requestAnimationFrame(() => {
-                modal.style.opacity = '1';
-                modal.querySelector('.modal-content').style.transform = 'translateY(0)';
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal(modal.querySelector('.modal-close'));
-            });
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+            document.body.style.overflow = 'hidden';
         }
 
-        function closeModal(button) {
-            const modal = button.closest('.modal');
-            modal.style.opacity = '0';
-            modal.querySelector('.modal-content').style.transform = 'translateY(-50px)';
-            setTimeout(() => modal.remove(), 300);
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
 
-        function viewCommunity(button) {
-            const communityRow = button.closest('tr');
-            const communityName = communityRow.querySelector('strong').textContent;
-            const description = communityRow.querySelector('.community-description').textContent;
-            const members = communityRow.children[1].textContent;
-            const posts = communityRow.children[2].textContent;
-            
-            const content = `
+        function showToast(message, isSuccess = true) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${isSuccess ? 'success' : 'error'}`;
+            toast.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function validateEmoji(input) {
+            const emojiRegex = /^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Component}]{1,4}$/u;
+            return emojiRegex.test(input) || input === '';
+        }
+
+        function createCommunity() {
+            const name = document.getElementById('createName').value.trim();
+            const description = document.getElementById('createDescription').value.trim();
+            const icon = document.getElementById('createIcon').value.trim() || '📚';
+            const status = document.getElementById('createStatus').value;
+
+            if (!name || !description) {
+                showToast('Name and description are required', false);
+                return;
+            }
+            if (icon && !validateEmoji(icon)) {
+                showToast('Invalid emoji icon', false);
+                return;
+            }
+
+            fetch('community_actions.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=create_community&name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&icon=${encodeURIComponent(icon)}&status=${encodeURIComponent(status)}`
+                })
+                .then(response => response.text().then(text => ({
+                    response,
+                    text
+                })))
+                .then(({
+                    response,
+                    text
+                }) => {
+                    console.log('Raw response:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Invalid JSON: ' + text);
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        closeModal('createCommunityModal');
+                        showToast(data.message);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showToast('Network error: ' + error.message, false);
+                });
+        }
+
+        function viewCommunity(communityId) {
+            const row = document.querySelector(`tr[data-community-id="${communityId}"]`);
+            const icon = row.querySelector('.community-icon').outerHTML;
+            const name = row.querySelector('strong').textContent;
+            const description = row.querySelector('.community-description').textContent;
+            const members = row.children[1].textContent;
+            const posts = row.children[2].textContent;
+
+            document.getElementById('viewCommunityContent').innerHTML = `
                 <div class="community-detail">
                     <div class="community-header">
-                        ${communityRow.querySelector('.community-icon').outerHTML}
-                        <h3>${communityName}</h3>
+                        ${icon}
+                        <h3>${name}</h3>
                     </div>
                     <p>${description}</p>
                     <div class="community-stats">
@@ -910,154 +487,192 @@ function getIconColor($index) {
                     </div>
                 </div>
             `;
-            showModal('Community Details', content);
+            openModal('viewCommunityModal');
         }
 
-        function showStatistics(button) {
-            const communityRow = button.closest('tr');
-            const communityName = communityRow.querySelector('strong').textContent;
-            const members = parseInt(communityRow.children[1].textContent);
-            const posts = parseInt(communityRow.children[2].textContent);
-            
-            const content = `
-                <div class="statistics-detail">
-                    <h3>${communityName} Statistics</h3>
-                    <div class="statistics-grid">
-                        <div class="stat-card">
-                            <h4>Total Members</h4>
-                            <div class="stat-value">${members}</div>
-                            <div class="stat-trend positive">↑ 12% this month</div>
-                        </div>
-                        <div class="stat-card">
-                            <h4>Total Posts</h4>
-                            <div class="stat-value">${posts}</div>
-                            <div class="stat-trend positive">↑ 8% this month</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            showModal('Community Statistics', content);
-        }
-
-        function editCommunity(button) {
-            const communityRow = button.closest('tr');
-            const communityId = communityRow.dataset.communityId;
-            const communityName = communityRow.querySelector('strong').textContent;
-            const description = communityRow.querySelector('.community-description').textContent;
-            
-            const content = `
-                <form class="edit-form" onsubmit="event.preventDefault(); saveEdit(this, ${communityId});">
-                    <div class="form-group">
-                        <label>Community Name</label>
-                        <input type="text" name="name" value="${communityName}" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea name="description" required>${description}</textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="cancel-btn" onclick="closeModal(this.closest('.modal').querySelector('.modal-close'))">Cancel</button>
-                        <button type="submit" class="save-btn">Save Changes</button>
-                    </div>
-                </form>
-            `;
-            showModal('Edit Community', content);
-        }
-
-        function deleteCommunity(button) {
-            const communityRow = button.closest('tr');
-            const communityId = communityRow.dataset.communityId;
-            const communityName = communityRow.querySelector('strong').textContent;
-            
-            if (confirm(`Are you sure you want to delete "${communityName}"? This action cannot be undone.`)) {
-                fetch('', {
+        function showStatistics(communityId) {
+            fetch('community_actions.php', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `action=delete_community&community_id=${communityId}`
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=get_community_stats&community_id=${communityId}`
                 })
-                .then(response => response.json())
+                .then(response => response.text().then(text => ({
+                    response,
+                    text
+                })))
+                .then(({
+                    response,
+                    text
+                }) => {
+                    console.log('Raw response:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Invalid JSON: ' + text);
+                    }
+                })
                 .then(data => {
                     if (data.success) {
-                        showToast(data.message);
-                        communityRow.remove();
-                        // Update count
-                        const countEl = document.querySelector('.community-count');
-                        const currentCount = parseInt(countEl.textContent);
-                        countEl.textContent = `${currentCount - 1} communities`;
+                        const {
+                            member_count,
+                            post_count,
+                            new_members,
+                            new_posts
+                        } = data.data;
+                        const memberTrend = new_members > 0 ? `↑ ${Math.round((new_members / (member_count || 1)) * 100)}% this month` : 'No change';
+                        const postTrend = new_posts > 0 ? `↑ ${Math.round((new_posts / (post_count || 1)) * 100)}% this month` : 'No change';
+                        document.getElementById('statisticsContent').innerHTML = `
+                        <div class="statistics-detail">
+                            <h3>${document.querySelector(`tr[data-community-id="${communityId}"] strong`).textContent} Statistics</h3>
+                            <div class="statistics-grid">
+                                <div class="stat-card">
+                                    <h4>Total Members</h4>
+                                    <div class="stat-value">${member_count}</div>
+                                    <div class="stat-trend ${new_members > 0 ? '' : 'negative'}">${memberTrend}</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Total Posts</h4>
+                                    <div class="stat-value">${post_count}</div>
+                                    <div class="stat-trend ${new_posts > 0 ? '' : 'negative'}">${postTrend}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                        openModal('statisticsModal');
                     } else {
-                        showToast(data.message, 'error');
+                        showToast(data.message, false);
                     }
                 })
                 .catch(error => {
-                    showToast('An error occurred', 'error');
-                    console.error('Error:', error);
+                    console.error('Fetch error:', error);
+                    showToast('Network error: ' + error.message, false);
                 });
+        }
+
+        function editCommunity(communityId) {
+            const row = document.querySelector(`tr[data-community-id="${communityId}"]`);
+            const name = row.querySelector('strong').textContent;
+            const description = row.querySelector('.community-description').textContent;
+            const icon = row.querySelector('.community-icon').textContent.trim();
+            const status = row.querySelector('.status-tag').textContent.toLowerCase();
+
+            document.getElementById('editName').value = name;
+            document.getElementById('editDescription').value = description;
+            document.getElementById('editIcon').value = icon;
+            document.getElementById('editStatus').value = status;
+            document.getElementById('editCommunityId').value = communityId;
+            openModal('editCommunityModal');
+        }
+
+        function saveEditCommunity() {
+            const communityId = document.getElementById('editCommunityId').value;
+            const name = document.getElementById('editName').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const icon = document.getElementById('editIcon').value.trim() || '📚';
+            const status = document.getElementById('editStatus').value;
+
+            if (!name || !description) {
+                showToast('Name and description are required', false);
+                return;
             }
+            if (icon && !validateEmoji(icon)) {
+                showToast('Invalid emoji icon', false);
+                return;
+            }
+
+            fetch('community_actions.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=update_community&community_id=${communityId}&name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&icon=${encodeURIComponent(icon)}&status=${encodeURIComponent(status)}`
+                })
+                .then(response => response.text().then(text => ({
+                    response,
+                    text
+                })))
+                .then(({
+                    response,
+                    text
+                }) => {
+                    console.log('Raw response:', text); // keeps full error message for debugging
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Invalid JSON: ' + text);
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        closeModal('editCommunityModal');
+                        showToast(data.message);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast(data.message, false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showToast('Network error: ' + error.message, false);
+                });
         }
 
-        function saveEdit(form, communityId) {
-            const formData = new FormData(form);
-            formData.append('action', 'update_community');
-            formData.append('community_id', communityId);
-            
-            fetch('', {
-                method: 'POST',
-                body: new URLSearchParams(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(data.message);
-                    closeModal(form.closest('.modal').querySelector('.modal-close'));
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('An error occurred', 'error');
-                console.error('Error:', error);
-            });
-        }
 
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = `
-                <i class="fa-solid fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i>
-                <span>${message}</span>
-            `;
-            document.body.appendChild(toast);
-
-            Object.assign(toast.style, {
-                position: 'fixed',
-                bottom: '20px',
-                right: '20px',
-                backgroundColor: type === 'success' ? 'var(--primary-color)' : '#f44336',
-                color: 'white',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                zIndex: '1000',
-                transform: 'translateY(100px)',
-                opacity: '0',
-                transition: 'all 0.3s ease'
-            });
-
-            requestAnimationFrame(() => {
-                toast.style.transform = 'translateY(0)';
-                toast.style.opacity = '1';
-            });
-
-            setTimeout(() => {
-                toast.style.transform = 'translateY(100px)';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+        function deleteCommunity(communityId, communityName) {
+            if (!confirm(`Are you sure you want to delete "${communityName}"? This action cannot be undone.`)) {
+                return;
+            }
+            fetch('community_actions.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=delete_community&community_id=${communityId}`
+                })
+                .then(response => response.text().then(text => ({
+                    response,
+                    text
+                })))
+                .then(({
+                    response,
+                    text
+                }) => {
+                    console.log('Raw response:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Invalid JSON: ' + text);
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message);
+                        const row = document.querySelector(`tr[data-community-id="${communityId}"]`);
+                        row.remove();
+                        const countEl = document.querySelector('.community-count');
+                        const currentCount = parseInt(countEl.textContent);
+                        countEl.textContent = `${currentCount - 1} communities`;
+                        if (currentCount === 1) {
+                            document.querySelector('.communities-table').outerHTML = `
+                            <div class="empty-state">
+                                <i class="fa-solid fa-users"></i>
+                                <h3>No Communities Yet</h3>
+                                <p>Create your first community to get started!</p>
+                            </div>
+                        `;
+                        }
+                    } else {
+                        showToast(data.message, false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showToast('Network error: ' + error.message, false);
+                });
         }
     </script>
 </body>
+
 </html>

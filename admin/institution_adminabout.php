@@ -1,12 +1,43 @@
+<?php
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', '/Applications/XAMPP/xamppfiles/logs/php_errors.log');
+error_reporting(E_ALL);
+
+session_start();
+
+
+include '../inc/config.php';
+
+// Fetch institution details
+$stmt = $conn->prepare("SELECT name, location, about_text, mission, vision, email, phone, website, students, faculty, departments, campuses FROM institution_details WHERE id = 1");
+$stmt->execute();
+$result = $stmt->get_result();
+$institution = $result->fetch_assoc() ?: [
+    'name' => 'University of Lagos (UNILAG)',
+    'location' => 'Akoka, Yaba, Lagos State, Nigeria',
+    'about_text' => 'Founded in 1962, University of Lagos is a leading institution...',
+    'mission' => 'To provide transformative educational experiences...',
+    'vision' => 'To be a global leader in education and research...',
+    'email' => 'info@unilag.edu.ng',
+    'phone' => '+2348034567890',
+    'website' => 'http://www.unilag.edu.ng',
+    'students' => 12000,
+    'faculty' => 150,
+    'departments' => 42,
+    'campuses' => 5
+];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>University of Lagos - About</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title><?php echo htmlspecialchars($institution['name']); ?> - About</title>
+    <link rel="stylesheet" href="../fontawesome-free-6.7.2-web/css/all.min.css">
     <style>
-        /* CSS Reset and Variables */
         * {
             margin: 0;
             padding: 0;
@@ -14,10 +45,10 @@
         }
 
         :root {
-            --primary-color: #7f00ff; /* Purple for key elements */
+            --primary-color: #7f00ff;
             --primary-dark: #6a00d6;
             --light-bg: #ffffff;
-            --main-bg: #f5f5f7; /* Off-white page background */
+            --main-bg: #f5f5f7;
             --text-dark: #1c1c1c;
             --text-light: #666;
             --border-color: #e0e0e0;
@@ -29,15 +60,13 @@
             --hover-bg: #f0e6ff;
             --active-nav-bg: rgba(127, 0, 255, 0.1);
             --transition-normal: all 0.3s ease;
+            --font-primary: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
             font-family: var(--font-primary);
             background-color: var(--main-bg);
             color: var(--text-dark);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
@@ -46,7 +75,12 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             color: var(--text-dark);
             font-weight: 600;
             line-height: 1.3;
@@ -68,84 +102,34 @@
             box-shadow: var(--card-shadow);
             min-height: 95vh;
             overflow: hidden;
-            position: relative;
         }
 
-        /* Top Header (Navigation Bar) */
         .header {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 40px);
-            max-width: 1400px;
+            width: 100%;
             height: var(--header-height);
             background-color: var(--light-bg);
-            border-bottom: 1px solid var(--border-color);
             padding: 0 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
             z-index: 100;
-            border-radius: 16px 16px 0 0;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 40px;
-            padding-left: 270px;
-            flex: 1;
-        }
-
-        .uni-brand {
-            display: flex;
-            align-items: center;
-            min-width: 220px;
-            position: relative;
-            padding-right: 20px;
-        }
-
-        .uni-brand::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            height: 24px;
-            width: 1px;
-            background-color: var(--border-color);
-        }
-
-        .uni-brand strong {
-            font-size: 1.1rem;
-            color: var(--primary-color);
-            font-weight: 600;
-            line-height: 1.2;
-            letter-spacing: -0.3px;
         }
 
         .header-nav {
             display: flex;
             gap: 5px;
             align-items: center;
-            height: 100%;
         }
 
         .header-nav a {
-            text-decoration: none;
-            color: var(--text-dark);
             padding: 8px 16px;
             border-radius: 8px;
-            transition: var(--transition-normal);
+            color: var(--text-dark);
             font-weight: 500;
             position: relative;
-            display: flex;
-            align-items: center;
-            height: 38px;
         }
 
         .header-nav a:hover {
@@ -160,18 +144,12 @@
         .header-nav .active-nav::after {
             content: '';
             position: absolute;
-            bottom: -15px;
+            bottom: -1px;
             left: 15px;
             right: 15px;
             height: 3px;
             background-color: var(--primary-color);
             border-radius: 2px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 15px;
         }
 
         .header-right i {
@@ -193,7 +171,6 @@
             transform: translateY(-2px);
         }
 
-        /* Left Sidebar (Institution Info and Navigation) */
         .sidebar {
             width: 300px;
             padding: 90px 25px 25px;
@@ -206,39 +183,7 @@
             box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.05);
         }
 
-        .side-nav {
-            padding: 0 5px;
-        }
-
-        .uni-profile-img {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background-color: var(--hover-bg);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 15px;
-            overflow: hidden;
-            border: 3px solid var(--primary-color);
-            transition: var(--transition-normal);
-            cursor: pointer;
-        }
-
-        .uni-profile-img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(127, 0, 255, 0.2);
-        }
-
-        .uni-profile-img i {
-            font-size: 35px;
-            color: var(--primary-color);
-        }
-
         .uni-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             padding: 10px 15px 25px;
             margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
@@ -255,8 +200,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 10px;
-            overflow: hidden;
+            margin: 0 auto 10px;
             border: 2px solid var(--primary-color);
         }
 
@@ -265,15 +209,17 @@
             color: var(--text-light);
         }
 
+        .uni-details strong {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 5px;
+            font-weight: var(--font-medium);
+        }
+
         .uni-details p {
             font-size: 12px;
             color: var(--text-light);
             margin-top: 2px;
-        }
-        
-        .uni-details strong {
-            display: block;
-            margin-bottom: 5px;
         }
 
         .verified-icon {
@@ -284,82 +230,42 @@
         .nav-link {
             display: flex;
             align-items: center;
-            text-decoration: none;
-            color: var(--text-dark);
             padding: 14px 18px;
             margin: 4px 0;
             border-radius: 12px;
-            transition: var(--transition-normal);
+            color: var(--text-dark);
             font-weight: 500;
-            position: relative;
-            overflow: hidden;
             font-size: 15px;
-            letter-spacing: 0.2px;
+            transition: var(--transition-normal);
         }
 
         .nav-link i {
             margin-right: 12px;
             font-size: 18px;
             width: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition-normal);
         }
 
-        .nav-link:hover {
+        .nav-link:hover,
+        .nav-link.active-sidebar {
             background-color: var(--hover-bg);
             color: var(--primary-color);
             transform: translateX(5px);
             box-shadow: 0 4px 10px rgba(127, 0, 255, 0.08);
         }
 
-        .nav-link:hover i {
-            color: var(--primary-color);
-            transform: scale(1.1);
-        }
-
         .nav-link.active-sidebar {
-            background-color: rgba(127, 0, 255, 0.1);
-            color: var(--primary-color);
             font-weight: var(--font-bold);
-            box-shadow: 0 4px 12px rgba(127, 0, 255, 0.12);
         }
 
-        .nav-link.active-sidebar i {
-            color: var(--primary-color);
-            transform: scale(1.1);
-        }
-
-        .nav-link i {
-            margin-right: 10px;
-        }
-
-        .nav-link:hover, .nav-link.active-sidebar {
-            background-color: #f0e6ff; /* Very light purple */
-            color: var(--primary-color);
-        }
-        
-        .nav-section-title {
-            font-size: 0.8rem;
-            color: var(--text-light);
-            text-transform: uppercase;
-            margin: 25px 15px 10px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            padding-left: 12px;
-        }
-
-        /* Main Content Area */
         .main-content {
             flex-grow: 1;
-            padding: 80px 40px 40px 40px; /* Space for the fixed header */
+            padding: 80px 40px 40px;
             overflow-y: auto;
-            max-height: 90vh; /* Max height for scrolling content */
+            max-height: 95vh;
         }
 
         .welcome-header {
-            background-color: #f7f3ff; /* Lightest purple background */
+            background-color: #f7f3ff;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 30px;
@@ -372,7 +278,6 @@
             font-weight: 700;
             color: var(--primary-color);
             margin-bottom: 8px;
-            letter-spacing: -0.5px;
         }
 
         .welcome-header p {
@@ -381,78 +286,81 @@
             opacity: 0.9;
         }
 
-        /* About Grid Layout */
         .about-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 30px;
         }
 
-        .left-column {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-
+        .left-column,
         .right-column {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
-        /* Content Blocks */
         .content-block {
             background-color: var(--light-bg);
-            padding: 35px;
-            border-radius: 16px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border-color);
             transition: var(--transition-normal);
         }
 
         .content-block:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .content-block h2 {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 18px;
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            letter-spacing: -0.3px;
-        }
-
-        .content-block h2 i {
-            color: var(--primary-color);
-            margin-right: 10px;
-            font-size: 24px;
-        }
-
-        .content-block p {
-            font-size: 15px;
-            line-height: 1.7;
-            color: #2d3748;
+            font-size: 20px;
             margin-bottom: 15px;
-        }
-
-        .mission-vision-list {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .mission-vision-item strong {
-            display: block;
-            font-size: 16px;
             color: var(--primary-color);
-            margin-bottom: 5px;
         }
 
-        /* Right Column Cards (Institution Stats and Contact) */
-        .contact-card, .stats-card {
+        .content-block p,
+        .content-block textarea,
+        .content-block input {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-dark);
+        }
+
+        .content-block textarea,
+        .content-block input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 10px;
+            resize: vertical;
+        }
+
+        .content-block textarea:focus,
+        .content-block input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .content-block button,
+        .modal button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: var(--light-bg);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .content-block button:hover,
+        .modal button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .contact-card,
+        .stats-card {
             background-color: var(--light-bg);
             padding: 20px;
             border-radius: 10px;
@@ -460,18 +368,11 @@
             border: 1px solid var(--border-color);
         }
 
-        .contact-card h3, .stats-card h3 {
+        .contact-card h3,
+        .stats-card h3 {
             font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
             color: var(--primary-color);
-            display: flex;
-            align-items: center;
-        }
-
-        .contact-card h3 i, .stats-card h3 i {
-            margin-right: 8px;
-            font-size: 20px;
+            margin-bottom: 15px;
         }
 
         .contact-item {
@@ -479,30 +380,13 @@
             align-items: center;
             margin-bottom: 12px;
             font-size: 14px;
-            line-height: 1.5;
         }
 
         .contact-item i {
-            color: var(--primary-color);
             margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .contact-item span {
-            color: #444;
-        }
-        
-        .contact-item a {
             color: var(--primary-color);
-            text-decoration: none;
-        }
-        
-        .contact-item a:hover {
-            text-decoration: underline;
         }
 
-        /* Stats Grid */
         .stats-inner-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -512,18 +396,12 @@
         .stat-line {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             padding: 10px 0;
-            border-bottom: 1px dashed #f0f0f0;
+            border-bottom: 1px dashed var(--border-color);
         }
 
         .stat-line:last-child {
             border-bottom: none;
-        }
-
-        .stat-line span {
-            font-size: 14px;
-            color: var(--text-light);
         }
 
         .stat-line strong {
@@ -532,79 +410,114 @@
             color: var(--primary-color);
         }
 
-        /* Responsive Design */
-        @media (max-width: 1440px) {
-            .page-container,
-            .header {
-                max-width: 1300px;
-            }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
         }
 
-        @media (max-width: 1200px) {
-            .page-container,
-            .header {
-                max-width: 1100px;
-            }
-            .header-left {
-                padding-left: 20px;
-            }
-            .sidebar {
-                width: 280px;
-            }
-            .main-content {
-                padding: 80px 30px 30px;
-            }
+        .modal-content {
+            background-color: var(--light-bg);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            font-size: 20px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .modal-content textarea,
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .modal-content button.close {
+            background-color: #ccc;
+            margin-left: 10px;
+        }
+
+        .modal-content button.close:hover {
+            background-color: #aaa;
+        }
+
+        /* Toast Styles */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 6px;
+            color: #fff;
+            z-index: 1001;
+            display: none;
+        }
+
+        .toast.success {
+            background-color: green;
+        }
+
+        .toast.error {
+            background-color: red;
         }
 
         @media (max-width: 992px) {
             .about-grid {
                 grid-template-columns: 1fr;
             }
-            .header-nav a {
-                padding: 8px 15px;
-            }
-            .content-block {
-                padding: 25px;
-            }
         }
 
         @media (max-width: 768px) {
-            .page-container,
-            .header {
-                margin: 10px;
-                width: calc(100% - 20px);
-            }
-            .header-left {
-                gap: 15px;
-            }
-            .uni-brand strong {
-                display: none;
-            }
-            .header-nav {
-                gap: 2px;
-            }
             .sidebar {
                 width: 250px;
+            }
+
+            .main-content {
+                padding: 80px 20px 20px;
             }
         }
 
         @media (max-width: 576px) {
-            .page-container,
-            .header {
-                margin: 5px;
-                width: calc(100% - 10px);
+            .page-container {
+                flex-direction: column;
             }
-            .main-content {
-                padding: 80px 20px 20px;
-            }
-            .content-block {
+
+            .sidebar {
+                width: 100%;
                 padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                height: auto;
+                padding: 10px;
+            }
+
+            .header-nav {
+                flex-direction: column;
+                gap: 10px;
             }
         }
     </style>
 </head>
-<body>
 
+<body>
     <header class="header">
         <div class="header-left">
             <nav class="header-nav">
@@ -627,12 +540,11 @@
                     <i class="fa-solid fa-graduation-cap"></i>
                 </div>
                 <div class="uni-details">
-                    <strong style="font-size: 16px;">University of Lagos (UNILAG)</strong>
+                    <strong><?php echo htmlspecialchars($institution['name']); ?></strong>
                     <p><i class="fa-solid fa-circle-check verified-icon"></i> Verified Institution</p>
-                    <p><i class="fa-solid fa-location-dot"></i> Lagos State, Nigeria</p>
+                    <p><i class="fa-solid fa-location-dot"></i> <?php echo htmlspecialchars($institution['location']); ?></p>
                 </div>
             </div>
-            
             <nav class="side-nav">
                 <a href="institution_admindashboard.php" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
                 <a href="institution_adminabout.php" class="nav-link active-sidebar"><i class="fa-solid fa-info-circle"></i> About</a>
@@ -643,71 +555,52 @@
 
         <main class="main-content">
             <div class="welcome-header">
-                <h1>Welcome, University of Lagos!</h1>
-                <p>Verified Academic Institution. Lagos Nigeria</p>
+                <h1>Welcome, <?php echo htmlspecialchars($institution['name']); ?>!</h1>
+                <p>Verified Academic Institution • <?php echo htmlspecialchars($institution['location']); ?></p>
             </div>
 
             <div class="about-grid">
                 <div class="left-column">
                     <div class="content-block">
                         <h2><i class="fa-solid fa-book"></i> About Us</h2>
-                        <p>Founded in 1995, University of Tech is a leading institution dedicated to excellence in education, research, and innovation. We pride ourselves on fostering a collaborative learning environment that prepares students for the challenges of the modern world.</p>
-                        <p>Our mission is to advance knowledge through teaching, research, and service, while cultivating a diverse and inclusive community of scholars committed to making a positive impact on society.</p>
+                        <p><?php echo htmlspecialchars($institution['about_text']); ?></p>
+                        <button onclick="openModal('editAboutModal')">Edit About</button>
                     </div>
 
                     <div class="content-block">
                         <h2><i class="fa-solid fa-bullseye"></i> Mission & Vision</h2>
-                        <div class="mission-vision-list">
-                            <div class="mission-vision-item">
-                                <strong>Mission:</strong>
-                                <p>To provide transformative educational experiences that inspire innovation, critical thinking, and lifelong learning.</p>
-                            </div>
-                            <div class="mission-vision-item">
-                                <strong>Vision:</strong>
-                                <p>To provide transformative educational experiences that inspire innovation, critical thinking, and lifelong learning.</p>
-                            </div>
+                        <div class="mission-vision-item">
+                            <strong>Mission:</strong>
+                            <p><?php echo htmlspecialchars($institution['mission']); ?></p>
                         </div>
+                        <div class="mission-vision-item">
+                            <strong>Vision:</strong>
+                            <p><?php echo htmlspecialchars($institution['vision']); ?></p>
+                        </div>
+                        <button onclick="openModal('editMissionVisionModal')">Edit Mission & Vision</button>
                     </div>
-                    
-                    <div class="content-block">
-                        <h2><i class="fa-solid fa-map-location-dot"></i> Location & Contact</h2>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-location-dot"></i> 
-                            <span>**Address:** Akoka, Yaba, Lagos State, Nigeria.</span>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-envelope"></i> 
-                            <span>**Email:** <a href="mailto:info@universitytech.edu">info@universitytech.edu</a></span>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-phone"></i> 
-                            <span>**Phone:** +234 803 456 7890</span>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-globe"></i> 
-                            <span>**Website:** <a href="http://www.unilag.edu">www.unilag.edu</a></span>
-                        </div>
-                    </div>
+
+                   
                 </div>
 
                 <div class="right-column">
                     <div class="contact-card">
                         <h3><i class="fa-solid fa-address-book"></i> Contact Information</h3>
                         <div class="contact-item">
-                            <i class="fa-solid fa-phone"></i> 
-                            <span>+234 803 456 7890</span>
+                            <i class="fa-solid fa-phone"></i>
+                            <span><?php echo htmlspecialchars($institution['phone']); ?></span>
                         </div>
                         <div class="contact-item">
-                            <i class="fa-solid fa-envelope"></i> 
-                            <a href="mailto:info@universitytech.edu">info@universitytech.edu</a>
+                            <i class="fa-solid fa-envelope"></i>
+                            <a href="mailto:<?php echo htmlspecialchars($institution['email']); ?>"><?php echo htmlspecialchars($institution['email']); ?></a>
                         </div>
                         <div class="contact-item">
-                            <i class="fa-solid fa-globe"></i> 
-                            <a href="http://www.unilag.edu">www.unilag.edu</a>
+                            <i class="fa-solid fa-globe"></i>
+                            <a href="<?php echo htmlspecialchars($institution['website']); ?>" target="_blank"><?php echo htmlspecialchars($institution['website']); ?></a>
                         </div>
                         <div class="contact-item">
-                            <i class="fa-solid fa-location-dot"></i> 
-                            <span>Akoka, Yaba, Lagos State, Nigeria.</span>
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span><?php echo htmlspecialchars($institution['location']); ?></span>
                         </div>
                     </div>
 
@@ -716,94 +609,228 @@
                         <div class="stats-inner-grid">
                             <div class="stat-line">
                                 <span>Students</span>
-                                <strong>12,000+</strong>
+                                <strong><?php echo number_format($institution['students']) . '+'; ?></strong>
                             </div>
                             <div class="stat-line">
                                 <span>Faculty</span>
-                                <strong>150+</strong>
+                                <strong><?php echo number_format($institution['faculty']) . '+'; ?></strong>
                             </div>
                             <div class="stat-line">
-                                <span>Department</span>
-                                <strong>42</strong>
+                                <span>Departments</span>
+                                <strong><?php echo number_format($institution['departments']); ?></strong>
                             </div>
                             <div class="stat-line">
                                 <span>Campuses</span>
-                                <strong>5</strong>
+                                <strong><?php echo number_format($institution['campuses']); ?></strong>
                             </div>
                         </div>
+                        <button onclick="openModal('editStatsModal')">Edit Stats</button>
                     </div>
                 </div>
             </div>
+
+            <!-- Modals -->
+            <div id="editAboutModal" class="modal">
+                <div class="modal-content">
+                    <h2>Edit About</h2>
+                    <textarea id="aboutText" rows="4"><?php echo htmlspecialchars($institution['about_text']); ?></textarea>
+                    <button onclick="updateAbout()">Update</button>
+                    <button class="close" onclick="closeModal('editAboutModal')">Cancel</button>
+                </div>
+            </div>
+
+            <div id="editMissionVisionModal" class="modal">
+                <div class="modal-content">
+                    <h2>Edit Mission & Vision</h2>
+                    <label>Mission:</label>
+                    <textarea id="missionText" rows="3"><?php echo htmlspecialchars($institution['mission']); ?></textarea>
+                    <label>Vision:</label>
+                    <textarea id="visionText" rows="3"><?php echo htmlspecialchars($institution['vision']); ?></textarea>
+                    <button onclick="updateMissionVision()">Update</button>
+                    <button class="close" onclick="closeModal('editMissionVisionModal')">Cancel</button>
+                </div>
+            </div>
+
+            <div id="editStatsModal" class="modal">
+                <div class="modal-content">
+                    <h2>Edit Stats</h2>
+                    <label>Students:</label>
+                    <input type="number" id="students" value="<?php echo htmlspecialchars($institution['students']); ?>" min="0">
+                    <label>Faculty:</label>
+                    <input type="number" id="faculty" value="<?php echo htmlspecialchars($institution['faculty']); ?>" min="0">
+                    <label>Departments:</label>
+                    <input type="number" id="departments" value="<?php echo htmlspecialchars($institution['departments']); ?>" min="0">
+                    <label>Campuses:</label>
+                    <input type="number" id="campuses" value="<?php echo htmlspecialchars($institution['campuses']); ?>" min="0">
+                    <button onclick="updateStats()">Update</button>
+                    <button class="close" onclick="closeModal('editStatsModal')">Cancel</button>
+                </div>
+            </div>
+
+            <div id="contactModal" class="modal">
+                <div class="modal-content">
+                    <h2>Send Message</h2>
+                    <input type="text" id="contactSubject" placeholder="Subject">
+                    <textarea id="contactMessage" rows="4" placeholder="Your message"></textarea>
+                    <button onclick="sendContactMessage()">Send</button>
+                    <button class="close" onclick="closeModal('contactModal')">Cancel</button>
+                </div>
+            </div>
+
+            <div id="toast" class="toast"></div>
         </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('About page loaded.');
+        // --- Global functions for modals and toast ---
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
 
-            // Navigation state management
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + (isSuccess ? 'success' : 'error');
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function postAction(bodyObj, callback) {
+            const formBody = Object.keys(bodyObj)
+                .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(bodyObj[key]))
+                .join('&');
+
+            fetch('about_actions.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formBody
+                })
+                .then(response => response.text())
+                .then(raw => {
+                    let data;
+                    try {
+                        data = JSON.parse(raw);
+                    } catch (e) {
+                        throw new Error('Invalid JSON: ' + raw);
+                    }
+                    callback(data);
+                })
+                .catch(err => {
+                    showToast('Network error: ' + err.message, false);
+                });
+        }
+
+        function updateAbout() {
+            const aboutText = document.getElementById('aboutText').value;
+            if (!aboutText) return showToast('About text required', false);
+            postAction({
+                action: 'update_institution_details',
+                about_text: aboutText,
+                mission: '',
+                vision: ''
+            }, data => {
+                if (data.success) {
+                    document.querySelector('.content-block p').textContent = aboutText;
+                    closeModal('editAboutModal');
+                    showToast(data.message);
+                } else showToast(data.message, false);
+            });
+        }
+
+        function updateMissionVision() {
+            const mission = document.getElementById('missionText').value;
+            const vision = document.getElementById('visionText').value;
+            if (!mission || !vision) return showToast('Mission and vision required', false);
+            postAction({
+                action: 'update_institution_details',
+                about_text: '',
+                mission,
+                vision
+            }, data => {
+                if (data.success) {
+                    document.querySelector('.mission-vision-item:nth-child(1) p').textContent = mission;
+                    document.querySelector('.mission-vision-item:nth-child(2) p').textContent = vision;
+                    closeModal('editMissionVisionModal');
+                    showToast(data.message);
+                } else showToast(data.message, false);
+            });
+        }
+
+        function updateStats() {
+            const students = document.getElementById('students').value;
+            const faculty = document.getElementById('faculty').value;
+            const departments = document.getElementById('departments').value;
+            const campuses = document.getElementById('campuses').value;
+            if (students < 0 || faculty < 0 || departments < 0 || campuses < 0) return showToast('Stats cannot be negative', false);
+            postAction({
+                action: 'update_stats',
+                students,
+                faculty,
+                departments,
+                campuses
+            }, data => {
+                if (data.success) {
+                    document.querySelector('.stat-line:nth-child(1) strong').textContent = Number(students).toLocaleString() + '+';
+                    document.querySelector('.stat-line:nth-child(2) strong').textContent = Number(faculty).toLocaleString() + '+';
+                    document.querySelector('.stat-line:nth-child(3) strong').textContent = Number(departments).toLocaleString();
+                    document.querySelector('.stat-line:nth-child(4) strong').textContent = Number(campuses).toLocaleString();
+                    closeModal('editStatsModal');
+                    showToast(data.message);
+                } else showToast(data.message, false);
+            });
+        }
+
+        function sendContactMessage() {
+            const subject = document.getElementById('contactSubject').value;
+            const message = document.getElementById('contactMessage').value;
+            if (!subject || !message) return showToast('Subject and message required', false);
+            postAction({
+                action: 'send_contact_message',
+                subject,
+                message
+            }, data => {
+                if (data.success) {
+                    closeModal('contactModal');
+                    showToast(data.message);
+                } else showToast(data.message, false);
+            });
+        }
+
+        // --- Navigation active state ---
+        document.addEventListener('DOMContentLoaded', () => {
             const navLinks = document.querySelectorAll('.nav-link');
             const headerNavLinks = document.querySelectorAll('.header-nav a');
-            
-            // Function to handle link clicks
-            const handleNavClick = (event) => {
-                // Don't prevent default - allow normal navigation
-                const targetLink = event.currentTarget;
-
-                // Clear active states in both side and header navs
+            const handleNavClick = event => {
                 navLinks.forEach(link => link.classList.remove('active-sidebar'));
                 headerNavLinks.forEach(link => link.classList.remove('active-nav'));
-
-                // Set active state on the clicked link
+                const targetLink = event.currentTarget;
                 if (targetLink.classList.contains('nav-link')) {
                     targetLink.classList.add('active-sidebar');
-                    // Find and set active state on corresponding header link
                     const linkText = targetLink.textContent.trim();
                     headerNavLinks.forEach(hLink => {
-                        if (hLink.textContent.trim() === linkText) {
-                            hLink.classList.add('active-nav');
-                        }
+                        if (hLink.textContent.trim() === linkText) hLink.classList.add('active-nav');
                     });
-                } else if (targetLink.parentElement.classList.contains('header-nav')) {
+                } else {
                     targetLink.classList.add('active-nav');
-                    // Find and set active state on corresponding sidebar link
                     const linkText = targetLink.textContent.trim();
                     navLinks.forEach(sLink => {
-                        if (sLink.textContent.trim().includes(linkText)) {
-                            sLink.classList.add('active-sidebar');
-                        }
+                        if (sLink.textContent.trim().includes(linkText)) sLink.classList.add('active-sidebar');
                     });
                 }
             };
-
-            // Attach click listeners
-            navLinks.forEach(link => link.addEventListener('click', handleNavClick));
-            headerNavLinks.forEach(link => link.addEventListener('click', handleNavClick));
-
-            // Content block hover effects
-            const contentBlocks = document.querySelectorAll('.content-block');
-            contentBlocks.forEach(block => {
-                block.addEventListener('mouseover', () => {
-                    block.style.transform = 'translateY(-3px)';
-                    block.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
-                });
-                block.addEventListener('mouseout', () => {
-                    block.style.transform = 'translateY(0)';
-                    block.style.boxShadow = '0 2px 15px rgba(0, 0, 0, 0.06)';
-                });
-            });
-
-            // Header icons hover effects
-            const headerIcons = document.querySelectorAll('.header-right i');
-            headerIcons.forEach(icon => {
-                icon.addEventListener('mouseover', () => {
-                    icon.style.transform = 'translateY(-2px)';
-                });
-                icon.addEventListener('mouseout', () => {
-                    icon.style.transform = 'translateY(0)';
-                });
-            });
+            navLinks.forEach(l => l.addEventListener('click', handleNavClick));
+            headerNavLinks.forEach(l => l.addEventListener('click', handleNavClick));
         });
     </script>
+
 </body>
+
 </html>
