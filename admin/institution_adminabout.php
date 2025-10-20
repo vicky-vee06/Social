@@ -5,12 +5,14 @@ ini_set('error_log', '/Applications/XAMPP/xamppfiles/logs/php_errors.log');
 error_reporting(E_ALL);
 
 session_start();
-
-
 include '../inc/config.php';
 
 // Fetch institution details
-$stmt = $conn->prepare("SELECT name, location, about_text, mission, vision, email, phone, website, students, faculty, departments, campuses FROM institution_details WHERE id = 1");
+$stmt = $conn->prepare("
+    SELECT name, location, about_text, mission, vision, email, phone, website
+    FROM institution_details 
+    WHERE id = 1
+");
 $stmt->execute();
 $result = $stmt->get_result();
 $institution = $result->fetch_assoc() ?: [
@@ -21,14 +23,23 @@ $institution = $result->fetch_assoc() ?: [
     'vision' => 'To be a global leader in education and research...',
     'email' => 'info@unilag.edu.ng',
     'phone' => '+2348034567890',
-    'website' => 'http://www.unilag.edu.ng',
-    'students' => 12000,
-    'faculty' => 150,
-    'departments' => 42,
-    'campuses' => 5
+    'website' => 'http://www.unilag.edu.ng'
 ];
-?>
 
+// Get live stats from users table
+$students = 0;
+$faculty = 0;
+$departments = 0;
+$campuses = 1;
+$res = $conn->query("SELECT COUNT(*) AS total FROM users");
+if ($res) $students = (int)$res->fetch_assoc()['total'];
+
+$res = $conn->query("SELECT COUNT(*) AS total FROM users WHERE faculty IS NOT NULL AND faculty <> ''");
+if ($res) $faculty = (int)$res->fetch_assoc()['total'];
+
+$res = $conn->query("SELECT COUNT(DISTINCT department) AS total FROM users WHERE department IS NOT NULL AND department <> ''");
+if ($res) $departments = (int)$res->fetch_assoc()['total'];
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -519,14 +530,12 @@ $institution = $result->fetch_assoc() ?: [
 
 <body>
     <header class="header">
-        <div class="header-left">
-            <nav class="header-nav">
-                <a href="institution_admindashboard.php">Dashboard</a>
-                <a href="institution_adminabout.php" class="active-nav">About</a>
-                <a href="institution_admincommunity.php">Communities</a>
-                <a href="institution_admin_faculty.php">Faculty</a>
-            </nav>
-        </div>
+        <nav class="header-nav">
+            <a href="institution_admindashboard.php">Dashboard</a>
+            <a href="institution_adminabout.php" class="active-nav">About</a>
+            <a href="institution_admincommunity.php">Communities</a>
+            <a href="institution_admin_faculty.php">Faculty</a>
+        </nav>
         <div class="header-right">
             <i class="fa-regular fa-bell"></i>
             <i class="fa-solid fa-gear"></i>
@@ -536,21 +545,17 @@ $institution = $result->fetch_assoc() ?: [
     <div class="page-container">
         <aside class="sidebar">
             <div class="uni-info">
-                <div class="uni-profile-img">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </div>
+                <div class="uni-profile-img"><i class="fa-solid fa-graduation-cap"></i></div>
                 <div class="uni-details">
                     <strong><?php echo htmlspecialchars($institution['name']); ?></strong>
-                    <p><i class="fa-solid fa-circle-check verified-icon"></i> Verified Institution</p>
+                    <p><i class="fa-solid fa-circle-check" style="color:green"></i> Verified Institution</p>
                     <p><i class="fa-solid fa-location-dot"></i> <?php echo htmlspecialchars($institution['location']); ?></p>
                 </div>
             </div>
-            <nav class="side-nav">
-                <a href="institution_admindashboard.php" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-                <a href="institution_adminabout.php" class="nav-link active-sidebar"><i class="fa-solid fa-info-circle"></i> About</a>
-                <a href="institution_admincommunity.php" class="nav-link"><i class="fa-solid fa-users"></i> Communities</a>
-                <a href="institution_admin_faculty.php" class="nav-link"><i class="fa-solid fa-building"></i> Faculty</a>
-            </nav>
+            <a href="institution_admindashboard.php" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+            <a href="institution_adminabout.php" class="nav-link active-sidebar"><i class="fa-solid fa-info-circle"></i> About</a>
+            <a href="institution_admincommunity.php" class="nav-link"><i class="fa-solid fa-users"></i> Communities</a>
+            <a href="institution_admin_faculty.php" class="nav-link"><i class="fa-solid fa-building"></i> Faculty</a>
         </aside>
 
         <main class="main-content">
@@ -563,169 +568,108 @@ $institution = $result->fetch_assoc() ?: [
                 <div class="left-column">
                     <div class="content-block">
                         <h2><i class="fa-solid fa-book"></i> About Us</h2>
-                        <p><?php echo htmlspecialchars($institution['about_text']); ?></p>
-                        <button onclick="openModal('editAboutModal')">Edit About</button>
+                        <p id="aboutTextDisplay"><?php echo htmlspecialchars($institution['about_text']); ?></p>
+                        <button onclick="openModal('editAboutModal')">Edit</button>
                     </div>
 
                     <div class="content-block">
                         <h2><i class="fa-solid fa-bullseye"></i> Mission & Vision</h2>
-                        <div class="mission-vision-item">
-                            <strong>Mission:</strong>
-                            <p><?php echo htmlspecialchars($institution['mission']); ?></p>
+                        <div><strong>Mission:</strong>
+                            <p id="missionDisplay"><?php echo htmlspecialchars($institution['mission']); ?></p>
                         </div>
-                        <div class="mission-vision-item">
-                            <strong>Vision:</strong>
-                            <p><?php echo htmlspecialchars($institution['vision']); ?></p>
+                        <div><strong>Vision:</strong>
+                            <p id="visionDisplay"><?php echo htmlspecialchars($institution['vision']); ?></p>
                         </div>
-                        <button onclick="openModal('editMissionVisionModal')">Edit Mission & Vision</button>
+                        <button onclick="openModal('editMissionVisionModal')">Edit</button>
                     </div>
-
-                   
                 </div>
 
                 <div class="right-column">
                     <div class="contact-card">
                         <h3><i class="fa-solid fa-address-book"></i> Contact Information</h3>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-phone"></i>
-                            <span><?php echo htmlspecialchars($institution['phone']); ?></span>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-envelope"></i>
-                            <a href="mailto:<?php echo htmlspecialchars($institution['email']); ?>"><?php echo htmlspecialchars($institution['email']); ?></a>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-globe"></i>
-                            <a href="<?php echo htmlspecialchars($institution['website']); ?>" target="_blank"><?php echo htmlspecialchars($institution['website']); ?></a>
-                        </div>
-                        <div class="contact-item">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span><?php echo htmlspecialchars($institution['location']); ?></span>
-                        </div>
+                        <div><i class="fa-solid fa-phone"></i> <span id="phoneDisplay"><?php echo htmlspecialchars($institution['phone']); ?></span></div>
+                        <div><i class="fa-solid fa-envelope"></i> <a href="mailto:<?php echo htmlspecialchars($institution['email']); ?>" id="emailDisplay"><?php echo htmlspecialchars($institution['email']); ?></a></div>
+                        <div><i class="fa-solid fa-globe"></i> <a href="<?php echo htmlspecialchars($institution['website']); ?>" target="_blank" id="websiteDisplay"><?php echo htmlspecialchars($institution['website']); ?></a></div>
+                        <div><i class="fa-solid fa-location-dot"></i> <span id="locationDisplay"><?php echo htmlspecialchars($institution['location']); ?></span></div>
+                        <button onclick="openModal('editContactModal')">Edit Contact Info</button>
                     </div>
 
                     <div class="stats-card">
                         <h3><i class="fa-solid fa-chart-simple"></i> Institution Stats</h3>
-                        <div class="stats-inner-grid">
-                            <div class="stat-line">
-                                <span>Students</span>
-                                <strong><?php echo number_format($institution['students']) . '+'; ?></strong>
-                            </div>
-                            <div class="stat-line">
-                                <span>Faculty</span>
-                                <strong><?php echo number_format($institution['faculty']) . '+'; ?></strong>
-                            </div>
-                            <div class="stat-line">
-                                <span>Departments</span>
-                                <strong><?php echo number_format($institution['departments']); ?></strong>
-                            </div>
-                            <div class="stat-line">
-                                <span>Campuses</span>
-                                <strong><?php echo number_format($institution['campuses']); ?></strong>
-                            </div>
-                        </div>
-                        <button onclick="openModal('editStatsModal')">Edit Stats</button>
+                        <div><span>Students</span> <strong id="studentsDisplay"><?php echo number_format($students); ?>+</strong></div>
+                        <div><span>Faculty</span> <strong id="facultyDisplay"><?php echo number_format($faculty); ?>+</strong></div>
+                        <div><span>Departments</span> <strong id="departmentsDisplay"><?php echo number_format($departments); ?></strong></div>
+                        <div><span>Campuses</span> <strong id="campusesDisplay"><?php echo number_format($campuses); ?></strong></div>
                     </div>
                 </div>
             </div>
-
-            <!-- Modals -->
-            <div id="editAboutModal" class="modal">
-                <div class="modal-content">
-                    <h2>Edit About</h2>
-                    <textarea id="aboutText" rows="4"><?php echo htmlspecialchars($institution['about_text']); ?></textarea>
-                    <button onclick="updateAbout()">Update</button>
-                    <button class="close" onclick="closeModal('editAboutModal')">Cancel</button>
-                </div>
-            </div>
-
-            <div id="editMissionVisionModal" class="modal">
-                <div class="modal-content">
-                    <h2>Edit Mission & Vision</h2>
-                    <label>Mission:</label>
-                    <textarea id="missionText" rows="3"><?php echo htmlspecialchars($institution['mission']); ?></textarea>
-                    <label>Vision:</label>
-                    <textarea id="visionText" rows="3"><?php echo htmlspecialchars($institution['vision']); ?></textarea>
-                    <button onclick="updateMissionVision()">Update</button>
-                    <button class="close" onclick="closeModal('editMissionVisionModal')">Cancel</button>
-                </div>
-            </div>
-
-            <div id="editStatsModal" class="modal">
-                <div class="modal-content">
-                    <h2>Edit Stats</h2>
-                    <label>Students:</label>
-                    <input type="number" id="students" value="<?php echo htmlspecialchars($institution['students']); ?>" min="0">
-                    <label>Faculty:</label>
-                    <input type="number" id="faculty" value="<?php echo htmlspecialchars($institution['faculty']); ?>" min="0">
-                    <label>Departments:</label>
-                    <input type="number" id="departments" value="<?php echo htmlspecialchars($institution['departments']); ?>" min="0">
-                    <label>Campuses:</label>
-                    <input type="number" id="campuses" value="<?php echo htmlspecialchars($institution['campuses']); ?>" min="0">
-                    <button onclick="updateStats()">Update</button>
-                    <button class="close" onclick="closeModal('editStatsModal')">Cancel</button>
-                </div>
-            </div>
-
-            <div id="contactModal" class="modal">
-                <div class="modal-content">
-                    <h2>Send Message</h2>
-                    <input type="text" id="contactSubject" placeholder="Subject">
-                    <textarea id="contactMessage" rows="4" placeholder="Your message"></textarea>
-                    <button onclick="sendContactMessage()">Send</button>
-                    <button class="close" onclick="closeModal('contactModal')">Cancel</button>
-                </div>
-            </div>
-
-            <div id="toast" class="toast"></div>
         </main>
     </div>
 
+    <!-- Modals -->
+    <div id="editAboutModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit About</h2>
+            <textarea id="aboutText" rows="4" style="width:100%"><?php echo htmlspecialchars($institution['about_text']); ?></textarea>
+            <button onclick="updateAbout()">Update</button>
+            <button onclick="closeModal('editAboutModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="editMissionVisionModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Mission & Vision</h2>
+            <label>Mission:</label>
+            <textarea id="missionText" rows="3" style="width:100%"><?php echo htmlspecialchars($institution['mission']); ?></textarea>
+            <label>Vision:</label>
+            <textarea id="visionText" rows="3" style="width:100%"><?php echo htmlspecialchars($institution['vision']); ?></textarea>
+            <button onclick="updateMissionVision()">Update</button>
+            <button onclick="closeModal('editMissionVisionModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="editContactModal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Contact Info</h2>
+            <label>Phone</label><input type="text" id="contactPhone" value="<?php echo htmlspecialchars($institution['phone']); ?>">
+            <label>Email</label><input type="email" id="contactEmail" value="<?php echo htmlspecialchars($institution['email']); ?>">
+            <label>Website</label><input type="text" id="contactWebsite" value="<?php echo htmlspecialchars($institution['website']); ?>">
+            <label>Location</label><input type="text" id="contactLocation" value="<?php echo htmlspecialchars($institution['location']); ?>">
+            <button onclick="updateContactInfo()">Update</button>
+            <button onclick="closeModal('editContactModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
     <script>
-        // --- Global functions for modals and toast ---
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex'
         }
 
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none'
         }
 
-        function showToast(message, isSuccess = true) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast ' + (isSuccess ? 'success' : 'error');
-            toast.style.display = 'block';
+        function showToast(msg, success = true) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + (success ? 'success' : 'error');
+            t.style.display = 'block';
             setTimeout(() => {
-                toast.style.display = 'none';
+                t.style.display = 'none'
             }, 3000);
         }
 
-        function postAction(bodyObj, callback) {
-            const formBody = Object.keys(bodyObj)
-                .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(bodyObj[key]))
-                .join('&');
-
-            fetch('about_actions.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formBody
-                })
-                .then(response => response.text())
-                .then(raw => {
-                    let data;
-                    try {
-                        data = JSON.parse(raw);
-                    } catch (e) {
-                        throw new Error('Invalid JSON: ' + raw);
-                    }
-                    callback(data);
-                })
-                .catch(err => {
-                    showToast('Network error: ' + err.message, false);
-                });
+        function postAction(bodyObj) {
+            const formBody = Object.keys(bodyObj).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(bodyObj[k])).join('&');
+            return fetch('about_actions.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formBody
+            }).then(r => r.json());
         }
 
         function updateAbout() {
@@ -733,12 +677,10 @@ $institution = $result->fetch_assoc() ?: [
             if (!aboutText) return showToast('About text required', false);
             postAction({
                 action: 'update_institution_details',
-                about_text: aboutText,
-                mission: '',
-                vision: ''
-            }, data => {
+                about_text: aboutText
+            }).then(data => {
                 if (data.success) {
-                    document.querySelector('.content-block p').textContent = aboutText;
+                    document.getElementById('aboutTextDisplay').textContent = aboutText;
                     closeModal('editAboutModal');
                     showToast(data.message);
                 } else showToast(data.message, false);
@@ -751,86 +693,44 @@ $institution = $result->fetch_assoc() ?: [
             if (!mission || !vision) return showToast('Mission and vision required', false);
             postAction({
                 action: 'update_institution_details',
-                about_text: '',
                 mission,
                 vision
-            }, data => {
+            }).then(data => {
                 if (data.success) {
-                    document.querySelector('.mission-vision-item:nth-child(1) p').textContent = mission;
-                    document.querySelector('.mission-vision-item:nth-child(2) p').textContent = vision;
+                    document.getElementById('missionDisplay').textContent = mission;
+                    document.getElementById('visionDisplay').textContent = vision;
                     closeModal('editMissionVisionModal');
                     showToast(data.message);
                 } else showToast(data.message, false);
             });
         }
 
-        function updateStats() {
-            const students = document.getElementById('students').value;
-            const faculty = document.getElementById('faculty').value;
-            const departments = document.getElementById('departments').value;
-            const campuses = document.getElementById('campuses').value;
-            if (students < 0 || faculty < 0 || departments < 0 || campuses < 0) return showToast('Stats cannot be negative', false);
+        function updateContactInfo() {
+            const phone = document.getElementById('contactPhone').value.trim();
+            const email = document.getElementById('contactEmail').value.trim();
+            const website = document.getElementById('contactWebsite').value.trim();
+            const location = document.getElementById('contactLocation').value.trim();
+            if (!email || !phone || !location) return showToast('Phone, Email & Location required', false);
             postAction({
-                action: 'update_stats',
-                students,
-                faculty,
-                departments,
-                campuses
-            }, data => {
-                if (data.success) {
-                    document.querySelector('.stat-line:nth-child(1) strong').textContent = Number(students).toLocaleString() + '+';
-                    document.querySelector('.stat-line:nth-child(2) strong').textContent = Number(faculty).toLocaleString() + '+';
-                    document.querySelector('.stat-line:nth-child(3) strong').textContent = Number(departments).toLocaleString();
-                    document.querySelector('.stat-line:nth-child(4) strong').textContent = Number(campuses).toLocaleString();
-                    closeModal('editStatsModal');
-                    showToast(data.message);
-                } else showToast(data.message, false);
+                action: 'update_contact_info',
+                phone,
+                email,
+                website,
+                location
+            }).then(res => {
+                if (res.success) {
+                    document.getElementById('phoneDisplay').textContent = phone;
+                    document.getElementById('emailDisplay').textContent = email;
+                    document.getElementById('emailDisplay').href = 'mailto:' + email;
+                    document.getElementById('websiteDisplay').textContent = website;
+                    document.getElementById('websiteDisplay').href = website;
+                    document.getElementById('locationDisplay').textContent = location;
+                    closeModal('editContactModal');
+                    showToast(res.message);
+                } else showToast(res.message, false);
             });
         }
-
-        function sendContactMessage() {
-            const subject = document.getElementById('contactSubject').value;
-            const message = document.getElementById('contactMessage').value;
-            if (!subject || !message) return showToast('Subject and message required', false);
-            postAction({
-                action: 'send_contact_message',
-                subject,
-                message
-            }, data => {
-                if (data.success) {
-                    closeModal('contactModal');
-                    showToast(data.message);
-                } else showToast(data.message, false);
-            });
-        }
-
-        // --- Navigation active state ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const navLinks = document.querySelectorAll('.nav-link');
-            const headerNavLinks = document.querySelectorAll('.header-nav a');
-            const handleNavClick = event => {
-                navLinks.forEach(link => link.classList.remove('active-sidebar'));
-                headerNavLinks.forEach(link => link.classList.remove('active-nav'));
-                const targetLink = event.currentTarget;
-                if (targetLink.classList.contains('nav-link')) {
-                    targetLink.classList.add('active-sidebar');
-                    const linkText = targetLink.textContent.trim();
-                    headerNavLinks.forEach(hLink => {
-                        if (hLink.textContent.trim() === linkText) hLink.classList.add('active-nav');
-                    });
-                } else {
-                    targetLink.classList.add('active-nav');
-                    const linkText = targetLink.textContent.trim();
-                    navLinks.forEach(sLink => {
-                        if (sLink.textContent.trim().includes(linkText)) sLink.classList.add('active-sidebar');
-                    });
-                }
-            };
-            navLinks.forEach(l => l.addEventListener('click', handleNavClick));
-            headerNavLinks.forEach(l => l.addEventListener('click', handleNavClick));
-        });
     </script>
-
 </body>
 
 </html>

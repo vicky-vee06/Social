@@ -1,45 +1,28 @@
 <?php
 session_start();
-include '../inc/config.php'; 
+include '../inc/config.php';
+$institution_id = $_SESSION['institution_id'] ?? 1;
 
-// Initialize variables for stats
-$totalCommunities = 0;
-$activeStudents = 0;
-$postsThisWeek = 0;
+// Counts
+$communityCount = $conn->query("SELECT COUNT(*) AS total FROM student_communities WHERE status=1")->fetch_assoc()['total'] ?? 0;
+$studentCount = $conn->query("SELECT COUNT(*) AS total FROM users")->fetch_assoc()['total'] ?? 0;
+$postCount = $conn->query("SELECT COUNT(*) AS total FROM posts WHERE WEEK(created_at)=WEEK(NOW())")->fetch_assoc()['total'] ?? 0;
 
-// Fetch total communities
-$sqlCommunities = "SELECT COUNT(*) AS total_communities FROM student_communities"; // Assuming a 'student_communities' table
-$resultCommunities = $conn->query($sqlCommunities);
-if ($resultCommunities && $resultCommunities->num_rows > 0) {
-    $row = $resultCommunities->fetch_assoc();
-    $totalCommunities = $row['total_communities'];
-}
-
-
-// Fetch active students (this is a placeholder, actual logic depends on your 'users' table and 'active' status)
-$sqlStudents = "SELECT COUNT(*) AS active_students FROM users WHERE status = 'active'"; // Assuming a 'users' table with a 'status' column
-$resultStudents = $conn->query($sqlStudents);
-if ($resultStudents && $resultStudents->num_rows > 0) {
-    $row = $resultStudents->fetch_assoc();
-    $activeStudents = $row['active_students'];
-}
-// Fetch posts this week
-$sqlPosts = "SELECT COUNT(*) AS posts_this_week FROM posts WHERE created_at >= CURDATE() - INTERVAL 7 DAY";
-$resultPosts = @$conn->query($sqlPosts);
-if ($resultPosts && $resultPosts->num_rows > 0) {
-    $row = $resultPosts->fetch_assoc();
-    $postsThisWeek = $row['posts_this_week'];
-}
+// Recent communities
+$recentCommunities = [];
+$result = $conn->query("SELECT id,name,description,members_count FROM student_communities WHERE status=1 ORDER BY created_at DESC LIMIT 5");
+while ($row = $result->fetch_assoc()) $recentCommunities[] = $row;
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>University of Lagos - Dashboard</title>
+    <title>UNILAG Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* --- Internal CSS --- */
+        /* --- Your existing CSS from before --- */
         * {
             margin: 0;
             padding: 0;
@@ -54,10 +37,10 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
         }
 
         :root {
-            --primary-color: #7f00ff; /* Purple for key elements */
+            --primary-color: #7f00ff;
             --primary-dark: #6a00d6;
             --light-bg: #ffffff;
-            --main-bg: #f5f5f7; /* Off-white page background */
+            --main-bg: #f5f5f7;
             --text-dark: #1c1c1c;
             --text-light: #666;
             --border-color: #e0e0e0;
@@ -90,7 +73,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             overflow: hidden;
         }
 
-        /* --- Header (Top Bar) --- */
         .header {
             width: 100%;
             height: var(--header-height);
@@ -147,7 +129,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             color: var(--primary-color);
         }
 
-        /* --- Sidebar (Left Panel) --- */
         .sidebar {
             width: 300px;
             padding: 90px 25px 25px;
@@ -208,7 +189,7 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             font-weight: var(--font-regular);
             letter-spacing: 0.2px;
         }
-        
+
         .verified-icon {
             color: green;
             margin-right: 5px;
@@ -259,7 +240,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             transform: scale(1.1);
         }
 
-        /* --- Main Content Area --- */
         .main-content {
             flex-grow: 1;
             padding: var(--header-height) 30px 30px 30px;
@@ -269,7 +249,7 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             gap: 25px;
         }
 
-       .welcome-header {
+        .welcome-header {
             background-color: #f7f3ff;
             padding: 20px;
             border-radius: 10px;
@@ -292,7 +272,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             opacity: 0.9;
         }
 
-        /* Stats Cards Section */
         .stats-grid {
             display: flex;
             gap: 20px;
@@ -336,7 +315,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             text-shadow: 0 1px 2px rgba(127, 0, 255, 0.1);
         }
 
-        /* Main Dashboard Body */
         .dashboard-body {
             display: flex;
             gap: 25px;
@@ -377,7 +355,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             border-radius: 3px;
         }
 
-        /* Announcement/Post Section */
         .post-box {
             background-color: var(--light-bg);
             padding: 20px;
@@ -449,50 +426,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             box-shadow: 0 4px 12px rgba(127, 0, 255, 0.1);
         }
 
-        .image-placeholders {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .image-placeholder {
-            width: 80px;
-            height: 80px;
-            background-color: var(--hover-bg);
-            border: 2px dashed var(--border-color);
-            border-radius: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--text-light);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all var(--transition-normal);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .image-placeholder:hover {
-            border-color: var(--primary-color);
-            background-color: rgba(127, 0, 255, 0.08);
-            transform: translateY(-2px);
-        }
-
-        .image-placeholder::before {
-            content: '\f067';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            font-size: 24px;
-            color: var(--primary-color);
-            opacity: 0.5;
-            transition: opacity var(--transition-normal);
-        }
-
-        .image-placeholder:hover::before {
-            opacity: 1;
-        }
-
-        /* Communities Section */
         .communities-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -552,7 +485,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             font-weight: var(--font-regular);
         }
 
-        /* Recent Activity (Right Panel) */
         .recent-activity h3 {
             font-size: 20px;
             font-weight: var(--font-bold);
@@ -592,7 +524,6 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             font-weight: 600;
         }
 
-        /* Screen reader only class for accessibility */
         .sr-only {
             position: absolute;
             width: 1px;
@@ -606,8 +537,8 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
         }
     </style>
 </head>
-<body>
 
+<body>
     <div class="page-container">
         <aside class="sidebar">
             <div class="uni-info">
@@ -615,13 +546,12 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
                     <i class="fa-solid fa-graduation-cap"></i>
                 </div>
                 <div class="uni-details">
-                    <strong style="font-size: 16px;">University of Lagos (UNILAG)</strong>
+                    <strong>University of Lagos (UNILAG)</strong>
                     <p><i class="fa-solid fa-circle-check verified-icon"></i> Verified Institution</p>
-                    <p><i class="fa-solid fa-location-dot"></i> Lagos State, Nigeria</p>
+                    <p><i class="fa-solid fa-location-dot"></i> Lagos, Nigeria</p>
                 </div>
             </div>
-            
-            <nav class="side-nav" aria-label="Main navigation">
+            <nav class="side-nav">
                 <a href="institution_admindashboard.php" class="nav-link active-sidebar"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
                 <a href="institution_adminabout.php" class="nav-link"><i class="fa-solid fa-circle-info"></i> About</a>
                 <a href="institution_admincommunity.php" class="nav-link"><i class="fa-solid fa-users"></i> Communities</a>
@@ -629,7 +559,7 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
             </nav>
         </aside>
 
-        <div style="flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto;">
+        <div style="flex-grow:1; display:flex; flex-direction:column; overflow-y:auto;">
             <header class="header">
                 <nav class="header-nav">
                     <a href="institution_admindashboard.php" class="active-nav">Dashboard</a>
@@ -652,146 +582,110 @@ if ($resultPosts && $resultPosts->num_rows > 0) {
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>Communities</h3>
-                        <strong><?php echo $totalCommunities; ?></strong>
+                        <strong id="communityCount"><?php echo $communityCount; ?></strong>
                     </div>
                     <div class="stat-card">
                         <h3>Active Students</h3>
-                        <strong><?php echo $activeStudents; ?></strong>
+                        <strong><?php echo $studentCount; ?></strong>
                     </div>
                     <div class="stat-card">
                         <h3>Posts this Week</h3>
-                        <strong><?php echo $postsThisWeek; ?></strong>
+                        <strong id="postCount"><?php echo $postCount; ?></strong>
                     </div>
                 </div>
 
                 <div class="dashboard-body">
                     <div class="left-panel">
                         <div class="post-box">
-                            <form action="" method="POST">
-                                <label for="post_content" class="sr-only">Create community or announcement</label>
-                                <textarea id="post_content" class="post-input" name="post_content" placeholder="create a new community or announce something to your students..." aria-label="Create community or announcement"></textarea>
+                            <form id="dashboardForm">
+                                <input type="text" id="community_name" class="post-input" placeholder="Community Name">
+                                <textarea id="community_description" class="post-input" placeholder="Community Description"></textarea>
+                                <textarea id="post_content" class="post-input" placeholder="Announcement Content (optional)"></textarea>
                                 <div class="post-actions">
-                                    <button type="submit" name="action" value="create_community" class="btn-create"><i class="fa-solid fa-plus"></i> Create</button>
-                                    <button type="submit" name="action" value="announce" class="btn-announce">Announce</button>
+                                    <button type="button" class="btn-create" data-action="create_community"><i class="fa-solid fa-plus"></i> Create Community</button>
+                                    <button type="button" class="btn-announce" data-action="announce">Announce</button>
                                 </div>
                             </form>
+                            <div id="formMessage" style="margin-top:10px;color:green;"></div>
                         </div>
 
-                        <div class="communities-grid">
-                            <!-- <div class="community-card">
-                                <div class="image-placeholder" style="width: 100%; height: 100px; margin: 10px 0;">image</div>
-                                <h4>Biology 101</h4>
-                                <p>87 Members</p>
-                            </div> -->
-                            <div class="community-card">
-                                <div class="community-image" style="width: 100%; height: 120px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                                    <i class="fa-solid fa-code" style="font-size: 40px; color: white;"></i>
+                        <div class="communities-grid" id="communitiesGrid">
+                            <?php foreach ($recentCommunities as $c): ?>
+                                <div class="community-card">
+                                    <div class="community-image" style="width:100%; height:120px; background:#f0e6ff; display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
+                                        <i class="fa-solid fa-users" style="font-size:40px; color:#793DDC;"></i>
+                                    </div>
+                                    <h4><?php echo htmlspecialchars($c['name']); ?></h4>
+                                    <p><?php echo $c['members_count']; ?> Members</p>
                                 </div>
-                                <h4>CS Club</h4>
-                                <p>12 Members</p>
-                            </div>
-                            <div class="community-card">
-                                <div class="community-image" style="width: 100%; height: 120px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                                    <i class="fa-solid fa-laptop-code" style="font-size: 40px; color: white;"></i>
-                                </div>
-                                <h4>Tech Community</h4>
-                                <p>1 Member</p>
-                            </div>
-                            <div class="community-card">
-                                <div class="community-image" style="width: 100%; height: 120px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                                    <i class="fa-solid fa-microscope" style="font-size: 40px; color: white;"></i>
-                                </div>
-                                <h4>Science Lab</h4>
-                                <p>87 Members</p>
-                            </div>
-                            <div class="community-card">
-                                <div class="community-image" style="width: 100%; height: 120px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                                    <i class="fa-solid fa-calculator" style="font-size: 40px; color: white;"></i>
-                                </div>
-                                <h4>Math Tutoring</h4>
-                                <p>87 Members</p>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
 
-                    <div class="right-panel recent-activity">
+                    <div class="right-panel recent-activity" id="activityFeed">
                         <h3>Recent Activity</h3>
-                        <div class="activity-item">
-                            <strong>Biology 101</strong>: 3 new posts today
-                            <span class="time">1 hour ago</span>
-                        </div>
-                        <div class="activity-item">
-                            <strong>CS Club</strong>: 12 new members joined
-                            <span class="time">4 hours ago</span>
-                        </div>
-                        <div class="activity-item">
-                            <strong>CS Club</strong>: 1 post flagged for review
-                            <span class="time">Yesterday</span>
-                        </div>
-                        <div class="activity-item">
-                            <strong>Biology 101</strong>: Member requested to join
-                            <span class="time">2 days ago</span>
-                        </div>
-                        <div class="activity-item">
-                            <strong>Math Tutoring</strong>: New resource uploaded
-                            <span class="time">3 days ago</span>
-                        </div>
+                        <p>No recent activity yet.</p>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Dashboard loaded.');
-
-            const navLinks = document.querySelectorAll('.nav-link');
-            const headerNavLinks = document.querySelectorAll('.header-nav a');
-            
-            const handleNavClick = (event) => {
-                const targetLink = event.currentTarget;
-                navLinks.forEach(link => link.classList.remove('active-sidebar'));
-                headerNavLinks.forEach(link => link.classList.remove('active-nav'));
-
-                if (targetLink.classList.contains('nav-link')) {
-                    targetLink.classList.add('active-sidebar');
-                    const linkText = targetLink.textContent.trim();
-                    headerNavLinks.forEach(hLink => {
-                        if (hLink.textContent.trim() === linkText) {
-                            hLink.classList.add('active-nav');
-                        }
-                    });
-                } else if (targetLink.parentElement.classList.contains('header-nav')) {
-                     targetLink.classList.add('active-nav');
-                    const linkText = targetLink.textContent.trim();
-                    navLinks.forEach(sLink => {
-                        if (sLink.textContent.trim().includes(linkText)) {
-                            sLink.classList.add('active-sidebar');
-                        }
-                    });
-                }
-            };
-
-            navLinks.forEach(link => link.addEventListener('click', handleNavClick));
-            headerNavLinks.forEach(link => link.addEventListener('click', handleNavClick));
-
-            document.querySelectorAll('.image-placeholder').forEach(placeholder => {
-                placeholder.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                            alert(`Selected image: ${file.name}`);
-                        }
-                    };
-                    input.click();
+        $(function() {
+            function refreshDashboard() {
+                $.get(location.href, function(html) {
+                    let newCommunities = $(html).find('#communitiesGrid').html();
+                    let newCommunityCount = $(html).find('#communityCount').text();
+                    let newPostCount = $(html).find('#postCount').text();
+                    $('#communitiesGrid').html(newCommunities);
+                    $('#communityCount').text(newCommunityCount);
+                    $('#postCount').text(newPostCount);
                 });
+            }
+
+            $('.btn-create').click(function() {
+                let name = $('#community_name').val().trim();
+                let description = $('#community_description').val().trim();
+                if (!name || !description) {
+                    $('#formMessage').text('Name and Description are required').css('color', 'red');
+                    return;
+                }
+
+                $.post('dashboard_actions.php', {
+                    action: 'create_community',
+                    name: name,
+                    description: description,
+                    icon: '📚'
+                }, function(res) {
+                    $('#formMessage').text(res.message).css('color', res.success ? 'green' : 'red');
+                    if (res.success) {
+                        $('#community_name, #community_description').val('');
+                        refreshDashboard();
+                    }
+                }, 'json');
+            });
+
+            $('.btn-announce').click(function() {
+                let content = $('#post_content').val().trim();
+                if (!content) {
+                    $('#formMessage').text('Announcement content is required').css('color', 'red');
+                    return;
+                }
+
+                $.post('dashboard_actions.php', {
+                    action: 'announce',
+                    content: content,
+                    community_id: null
+                }, function(res) {
+                    $('#formMessage').text(res.message).css('color', res.success ? 'green' : 'red');
+                    if (res.success) $('#post_content').val('');
+                    refreshDashboard();
+                }, 'json');
             });
         });
     </script>
 </body>
+
 </html>
